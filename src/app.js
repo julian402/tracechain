@@ -10,6 +10,8 @@ import userRoutes from './modules/users/users.routes.js'
 import statsRoutes from './modules/stats/stats.routes.js'
 import inspectionRoutes from './modules/inspections/inspections.routes.js'
 import reportRoutes from './modules/reports/report.routes.js'
+import swaggerUi from 'swagger-ui-express'
+import { swaggerSpec } from './config/swagger.js'
 
 const app = express()
 
@@ -28,6 +30,8 @@ app.use('/api/users', userRoutes)
 app.use('/api/stats', statsRoutes)
 app.use('/api/inspections', inspectionRoutes)
 app.use('/api/reports', reportRoutes)
+
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 app.use(errorHandler)
 
 export default app

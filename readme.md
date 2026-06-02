@@ -31,20 +31,10 @@ pnpm approve-builds
 cp .env.example .env
 ```
 
-El `.env` ya viene configurado para conectar con el contenedor de Docker. No hace falta cambiar nada si corres la BD con Docker.
-
 ### 4. Levantar la base de datos
-
-Asegúrate de tener Docker Desktop abierto, luego:
 
 ```bash
 docker compose up -d
-```
-
-Para ver los logs de la BD:
-
-```bash
-docker compose logs -f db
 ```
 
 ### 5. Correr las migraciones
@@ -53,20 +43,27 @@ docker compose logs -f db
 pnpm dlx prisma@6 migrate dev
 ```
 
-Esto crea todas las tablas en PostgreSQL.
+### 6. Cargar datos iniciales
 
-### 6. Arrancar el servidor
+```bash
+pnpm prisma:seed
+```
+
+Crea un usuario administrador: `admin@tracechain.com` / `admin123`
+
+### 7. Arrancar el servidor
 
 ```bash
 pnpm dev
 ```
 
-El servidor corre en `http://localhost:3000`. Para verificar que funciona:
-
+Servidor en `http://localhost:3000`. Verificar:
 ```bash
 curl http://localhost:3000/health
 # { "status": "ok" }
 ```
+
+---
 
 ## Scripts disponibles
 
@@ -74,10 +71,96 @@ curl http://localhost:3000/health
 |---|---|
 | `pnpm dev` | Servidor en modo desarrollo con hot reload |
 | `pnpm start` | Servidor en producción |
+| `pnpm test` | Correr tests en modo watch |
+| `pnpm test:coverage` | Tests con reporte de cobertura |
 | `docker compose up -d` | Levantar base de datos |
 | `docker compose down` | Apagar base de datos |
+| `docker compose logs -f db` | Ver logs de la BD en tiempo real |
 | `pnpm dlx prisma@6 migrate dev` | Correr migraciones |
-| `pnpm dlx prisma@6 studio` | Abrir Prisma Studio (UI visual de la BD) |
+| `pnpm dlx prisma@6 studio` | UI visual de la BD (localhost:5555) |
+| `pnpm prisma:seed` | Cargar datos iniciales |
+
+---
+
+## Endpoints
+
+### Auth — `/api/auth`
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| POST | `/register` | Registrar usuario | No |
+| POST | `/login` | Iniciar sesión | No |
+
+### Lotes — `/api/lots`
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| GET | `/` | Listar todos los lotes | Token |
+| GET | `/search?status=&search=&fromDate=&toDate=` | Filtrar lotes | Token |
+| GET | `/:id` | Obtener lote por ID | Token |
+| GET | `/:id/tree` | Árbol de trazabilidad (padres e hijos) | Token |
+| GET | `/public/:qrCode` | Vista pública del lote (sin login) | No |
+| POST | `/` | Crear lote | ADMIN, OPERATOR |
+| PATCH | `/:id/status` | Cambiar estado del lote | ADMIN, OPERATOR |
+
+### Movimientos — `/api/movements`
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| GET | `/` | Listar todos los movimientos | Token |
+| GET | `/lot/:lotId` | Movimientos de un lote | Token |
+| POST | `/` | Registrar movimiento | ADMIN, OPERATOR |
+
+### QR — `/api/qr`
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| GET | `/:qrCode` | Generar imagen QR en base64 | Token |
+
+### Auditoría — `/api/audit`
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| GET | `/` | Listar todos los logs | ADMIN, AUDITOR |
+| GET | `/search?action=&userId=&lotId=&fromDate=&toDate=` | Filtrar logs | ADMIN, AUDITOR |
+| GET | `/lot/:lotId` | Logs de un lote | ADMIN, AUDITOR |
+| GET | `/user/:userId` | Logs de un usuario | ADMIN, AUDITOR |
+
+### Usuarios — `/api/users`
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| GET | `/` | Listar usuarios | ADMIN |
+| GET | `/:id` | Obtener usuario | Token |
+| PATCH | `/:id` | Actualizar usuario | ADMIN |
+| PATCH | `/:id/password` | Cambiar contraseña | Token |
+| DELETE | `/:id` | Eliminar usuario | ADMIN |
+
+### Estadísticas — `/api/stats`
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| GET | `/dashboard` | KPIs, lotes recientes y alertas | Token |
+
+### Inspecciones — `/api/inspections`
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| GET | `/` | Listar inspecciones | ADMIN, AUDITOR |
+| GET | `/:id` | Obtener inspección | Token |
+| GET | `/lot/:lotId` | Inspecciones de un lote | Token |
+| POST | `/` | Crear inspección con hallazgos | ADMIN, AUDITOR, OPERATOR |
+
+### Reportes — `/api/reports`
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| GET | `/lots/csv` | Exportar lotes en CSV | ADMIN, AUDITOR |
+| GET | `/lots/pdf` | Exportar lotes en PDF | ADMIN, AUDITOR |
+| GET | `/movements/csv` | Exportar movimientos en CSV | ADMIN, AUDITOR |
+
+---
+
+## Roles
+
+| Rol | Descripción |
+|---|---|
+| `ADMIN` | Acceso total |
+| `OPERATOR` | Crear lotes, movimientos e inspecciones |
+| `AUDITOR` | Solo lectura, reportes y auditoría |
+
+---
 
 ## Flujo de trabajo Git
 
@@ -107,7 +190,10 @@ feat: descripción      → nueva funcionalidad
 fix: descripción       → corrección de bug
 chore: descripción     → configuración, dependencias
 docs: descripción      → documentación
+test: descripción      → tests
 ```
+
+---
 
 ## Estructura del proyecto
 
@@ -116,31 +202,40 @@ tracechain-backend/
 ├── prisma/
 │   ├── schema.prisma       # esquema de la BD
 │   ├── migrations/         # historial de migraciones
-│   └── seed.js             # datos de prueba
+│   └── seed.js             # datos iniciales
 ├── src/
 │   ├── config/
 │   │   ├── db.js           # instancia de Prisma
-│   │   └── logger.js       # Winston logger
+│   │   └── logger.js
 │   ├── middlewares/
-│   │   ├── auth.js         # verificación JWT
-│   │   ├── validate.js     # validación de DTOs
-│   │   └── errorHandler.js # manejo global de errores
+│   │   ├── auth.js         # verificación JWT y roles
+│   │   ├── validate.js     # validación de DTOs con Joi
+│   │   └── errorHandler.js
 │   ├── modules/
-│   │   ├── auth/           # login y registro
-│   │   ├── lots/           # lotes (núcleo del sistema)
-│   │   ├── movements/      # movimientos de lotes
-│   │   ├── qr/             # generación de QR
-│   │   ├── audit/          # bitácora de auditoría
-│   │   └── users/          # usuarios y roles
+│   │   ├── auth/
+│   │   ├── lots/
+│   │   ├── movements/
+│   │   ├── qr/
+│   │   ├── audit/
+│   │   ├── users/
+│   │   ├── stats/
+│   │   ├── inspections/
+│   │   └── reports/
 │   ├── shared/
 │   │   ├── AppError.js
+│   │   ├── audit.helper.js
 │   │   └── response.helper.js
 │   └── app.js
+├── tests/
+│   ├── unit/
+│   └── integration/
 ├── server.js
 ├── docker-compose.yml
 ├── .env.example
 └── package.json
 ```
+
+---
 
 ## Variables de entorno
 
@@ -151,3 +246,4 @@ tracechain-backend/
 | `JWT_SECRET` | Secreto para firmar tokens JWT |
 | `JWT_EXPIRES_IN` | Duración del token (ej: `7d`) |
 | `NODE_ENV` | `development` o `production` |
+| `PUBLIC_URL` | URL base para links de QR (ej: `http://localhost:3000`) |
