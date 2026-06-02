@@ -5,6 +5,7 @@ import authRoutes from './modules/auth/auth.routes.js'
 import lotRoutes from './modules/lots/lot.routes.js'
 import movementRoutes from './modules/movements/movement.routes.js'
 import qrRoutes from './modules/qr/qr.routes.js'
+import auditRoutes from './modules/audit/audit.routes.js'
 
 const app = express()
 
@@ -18,6 +19,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/lots', lotRoutes)
 app.use('/api/movements', movementRoutes)
 app.use('/api/qr', qrRoutes)
+app.use('/api/audit', auditRoutes)
 app.use(errorHandler)
 
 export default app

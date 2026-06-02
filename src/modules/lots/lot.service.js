@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { createLot, findAllLots, findLotById, findLotByQrCode, updateLotStatus } from './lot.repository.js'
 import { AppError } from '../../shared/AppError.js'
+import { logAction } from '../../shared/audit.helper.js'
 
 const generateCode = () => `LOT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`
 
@@ -13,7 +14,18 @@ export const createLotService = async (data, userId) => {
     if (!parent) throw new AppError('Lote padre no encontrado', 404)
   }
 
-  return createLot({ ...data, code, qrCode, createdById: userId })
+  const lot = await createLot({ ...data, code, qrCode, createdById: userId })
+
+  await logAction({
+    action: 'CREATE',
+    entity: 'Lot',
+    entityId: lot.id,
+    userId,
+    lotId: lot.id,
+    newData: lot
+  })
+
+  return lot
 }
 
 export const getAllLots = () => findAllLots()
