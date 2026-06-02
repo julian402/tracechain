@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+  AUDITOR
+}
+
+enum LotStatus {
+  ACTIVE
+  EXPIRED
+  QUARANTINE
+  DEPLETED
+}
+
+enum MovementType {
+  CREATED
+  TRANSFERRED
+  TRANSFORMED
+  SPLIT
+  MERGED
+  STATUS_CHANGED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(OPERATOR)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lots      Lot[]
+  movements Movement[]
+  auditLogs AuditLog[]
+}
+
+model Lot {
+  id              String    @id @default(uuid())
+  code            String    @unique
+  qrCode          String    @unique
+  name            String
+  quantity        Float
+  unit            String
+  status          LotStatus @default(ACTIVE)
+  productionDate  DateTime
+  expirationDate  DateTime
+  sanitaryRecord  String?
+  storageTemp     Float?
+  storageHumidity Float?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  parentLotId String?
+  parentLot   Lot?    @relation("LotChildren", fields: [parentLotId], references: [id])
+  childLots   Lot[]   @relation("LotChildren")
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  movements Movement[]
+  auditLogs AuditLog[]
+}
+
+model Movement {
+  id           String       @id @default(uuid())
+  type         MovementType
+  description  String
+  quantity     Float?
+  fromLocation String?
+  toLocation   String?
+  createdAt    DateTime     @default(now())
+
+  lotId       String
+  lot         Lot    @relation(fields: [lotId], references: [id])
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  entity    String
+  entityId  String
+  oldData   Json?
+  newData   Json?
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  lotId String?
+  lot   Lot?   @relation(fields: [lotId], references: [id])
+}
