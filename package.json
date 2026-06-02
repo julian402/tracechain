@@ -4,12 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "node --watch --env-file=.env src/app.js",
-    "start": "node --env-file=.env src/app.js",
+    "dev": "node --watch --env-file=.env server.js",
+    "start": "node --env-file=.env server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prisma:migrate": "pnpm dlx prisma migrate dev",
-    "prisma:studio": "pnpm dlx prisma studio",
-    "prisma:generate": "pnpm dlx prisma generate"
+    "prisma:migrate": "pnpm dlx prisma@6 migrate dev",
+    "prisma:studio": "pnpm dlx prisma@6 studio",
+    "prisma:generate": "pnpm dlx prisma@6 generate"
   },
   "keywords": [],
   "author": "",
