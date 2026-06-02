@@ -41,6 +41,7 @@ model User {
   lots      Lot[]
   movements Movement[]
   auditLogs AuditLog[]
+  visits    Visit[]
 }
 
 model Lot {
@@ -69,6 +70,7 @@ model Lot {
 
   movements Movement[]
   auditLogs AuditLog[]
+  visits    Visit[]
 }
 
 model Movement {
@@ -101,4 +103,58 @@ model AuditLog {
 
   lotId String?
   lot   Lot?   @relation(fields: [lotId], references: [id])
+}
+
+enum VisitType {
+  AUDITORIA
+  INTERVENTORIA
+  INSPECCION
+}
+
+enum FindingType {
+  NO_CONFORMIDAD
+  OBSERVACION
+  OPORTUNIDAD
+}
+
+enum FindingPriority {
+  ALTA
+  MEDIA
+  BAJA
+}
+
+model Visit {
+  id              String    @id @default(uuid())
+  visitType       VisitType
+  visitDate       DateTime
+  actReference    String?
+  auditorEntity   String
+  auditorName     String
+  auditedProcess  String?
+  objective       String?
+  responsible     String?
+  commitmentDate  DateTime?
+  correctiveActions String?
+  createdAt       DateTime  @default(now())
+
+  lotId           String?
+  lot             Lot?      @relation(fields: [lotId], references: [id])
+
+  createdById     String
+  createdBy       User      @relation(fields: [createdById], references: [id])
+
+  findings        Finding[]
+}
+
+model Finding {
+  id          String          @id @default(uuid())
+  type        FindingType
+  priority    FindingPriority
+  criteria    String?
+  description String
+  deadline    DateTime?
+  createdAt   DateTime        @default(now())
+
+  visitId     String
+  visit       Visit           @relation(fields: [visitId], references: [id])
 }

@@ -8,6 +8,7 @@ import qrRoutes from './modules/qr/qr.routes.js'
 import auditRoutes from './modules/audit/audit.routes.js'
 import userRoutes from './modules/users/users.routes.js'
 import statsRoutes from './modules/stats/stats.routes.js'
+import inspectionRoutes from './modules/inspections/inspections.routes.js'
 
 const app = express()
 
@@ -24,6 +25,7 @@ app.use('/api/qr', qrRoutes)
 app.use('/api/audit', auditRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/stats', statsRoutes)
+app.use('/api/inspections', inspectionRoutes)
 app.use(errorHandler)
 
 export default app
