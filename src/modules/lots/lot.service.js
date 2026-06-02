@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { createLot, findAllLots, findLotById, findLotByQrCode, updateLotStatus } from './lot.repository.js'
 import { AppError } from '../../shared/AppError.js'
 import { logAction } from '../../shared/audit.helper.js'
+import { findLotsByFilters } from './lot.repository.js'
 
 const generateCode = () => `LOT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`
 
@@ -47,3 +48,5 @@ export const changeLotStatus = async (id, status) => {
   if (!lot) throw new AppError('Lote no encontrado', 404)
   return updateLotStatus(id, status)
 }
+
+export const getLotsByFilters = (filters) => findLotsByFilters(filters)

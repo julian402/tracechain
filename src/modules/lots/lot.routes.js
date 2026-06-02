@@ -4,7 +4,8 @@ import {
   getAllLotsController,
   getLotByIdController,
   getPublicLotController,
-  changeLotStatusController
+  changeLotStatusController,
+  getLotsByFiltersController
 } from './lot.controller.js'
 import { authenticate, authorize } from '../../middlewares/auth.js'
 import { validate } from '../../middlewares/validate.js'
@@ -14,6 +15,8 @@ const router = Router()
 
 // publica — sin token
 router.get('/public/:qrCode', getPublicLotController)
+
+router.get('/search', authenticate, getLotsByFiltersController)
 
 // protegidas
 router.get('/', authenticate, getAllLotsController)

@@ -3,7 +3,8 @@ import {
   getAllLots,
   getLotById,
   getPublicLotByQr,
-  changeLotStatus
+  changeLotStatus,
+  getLotsByFilters
 } from './lot.service.js'
 import { successResponse } from '../../shared/response.helper.js'
 
@@ -47,6 +48,16 @@ export const changeLotStatusController = async (req, res, next) => {
   try {
     const lot = await changeLotStatus(req.params.id, req.body.status)
     successResponse(res, lot)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const getLotsByFiltersController = async (req, res, next) => {
+  try {
+    const { status, search, fromDate, toDate } = req.query
+    const lots = await getLotsByFilters({ status, search, fromDate, toDate })
+    successResponse(res, lots)
   } catch (error) {
     next(error)
   }

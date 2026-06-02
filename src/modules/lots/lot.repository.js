@@ -37,3 +37,28 @@ export const findLotByQrCode = (qrCode) => {
 export const updateLotStatus = (id, status) => {
   return prisma.lot.update({ where: { id }, data: { status } })
 }
+
+export const findLotsByFilters = ({ status, search, fromDate, toDate }) => {
+  return prisma.lot.findMany({
+    where: {
+      ...(status && { status }),
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { code: { contains: search, mode: 'insensitive' } },
+          { sanitaryRecord: { contains: search, mode: 'insensitive' } }
+        ]
+      }),
+      ...(fromDate && toDate && {
+        createdAt: {
+          gte: new Date(fromDate),
+          lte: new Date(toDate)
+        }
+      })
+    },
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } }
+    },
+    orderBy: { createdAt: 'desc' }
+  })
+}

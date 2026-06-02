@@ -31,3 +31,15 @@ export const getAuditLogsByUserController = async (req, res, next) => {
     next(error)
   }
 }
+
+import { findAuditLogsByFilters } from './audit.repository.js'
+
+export const getAuditLogsByFiltersController = async (req, res, next) => {
+  try {
+    const { action, userId, lotId, fromDate, toDate } = req.query
+    const logs = await findAuditLogsByFilters({ action, userId, lotId, fromDate, toDate })
+    successResponse(res, logs)
+  } catch (error) {
+    next(error)
+  }
+}

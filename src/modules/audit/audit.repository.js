@@ -33,3 +33,24 @@ export const findAuditLogsByUser = (userId) => {
     orderBy: { createdAt: 'desc' }
   })
 }
+
+export const findAuditLogsByFilters = ({ action, userId, lotId, fromDate, toDate }) => {
+  return prisma.auditLog.findMany({
+    where: {
+      ...(action && { action }),
+      ...(userId && { userId }),
+      ...(lotId && { lotId }),
+      ...(fromDate && toDate && {
+        createdAt: {
+          gte: new Date(fromDate),
+          lte: new Date(toDate)
+        }
+      })
+    },
+    include: {
+      user: { select: { id: true, name: true, email: true } },
+      lot: { select: { id: true, code: true, name: true } }
+    },
+    orderBy: { createdAt: 'desc' }
+  })
+}
