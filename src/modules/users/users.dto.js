@@ -4,13 +4,16 @@ export const createUserDto = Joi.object({
   name: Joi.string().min(2).max(100).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
-  roleId: Joi.string().uuid().required()
+  roleId: Joi.string().uuid().required(),
+  organizationId: Joi.string().uuid().optional()
 })
 
 export const updateUserDto = Joi.object({
   name: Joi.string().min(2).max(100).optional(),
   email: Joi.string().email().optional(),
-  roleId: Joi.string().uuid().optional()
+  roleId: Joi.string().uuid().allow(null).optional(),
+  organizationId: Joi.string().uuid().allow(null).optional(),
+  isSuperAdmin: Joi.boolean().optional()
 })
 
 export const changePasswordDto = Joi.object({

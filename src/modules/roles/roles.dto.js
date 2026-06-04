@@ -14,3 +14,7 @@ export const updateRoleDto = Joi.object({
 export const setPermissionsDto = Joi.object({
   permissions: Joi.array().items(Joi.string()).required()
 })
+
+export const setRoleUsersDto = Joi.object({
+  userIds: Joi.array().items(Joi.string().uuid()).required()
+})

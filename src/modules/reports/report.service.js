@@ -65,6 +65,45 @@ export const exportMovementsCSV = async (organizationId) => {
   return parser.parse(data)
 }
 
+export const exportMovementsPDF = async (organizationId) => {
+  const movements = await getMovementData(organizationId)
+
+  return new Promise((resolve) => {
+    const doc = new PDFDocument({ margin: 40 })
+    const buffers = []
+
+    doc.on('data', chunk => buffers.push(chunk))
+    doc.on('end', () => resolve(Buffer.concat(buffers)))
+
+    doc.fontSize(18).font('Helvetica-Bold').text('TraceChain — Reporte de Movimientos', { align: 'center' })
+    doc.fontSize(10).font('Helvetica').text(`Generado: ${new Date().toLocaleDateString('es-CO')}`, { align: 'center' })
+    doc.moveDown()
+
+    doc.fontSize(11).font('Helvetica-Bold').text('Resumen general')
+    doc.font('Helvetica').fontSize(10)
+    doc.text(`Total de movimientos: ${movements.length}`)
+    doc.moveDown()
+
+    doc.fontSize(11).font('Helvetica-Bold').text('Detalle de movimientos')
+    doc.moveDown(0.5)
+
+    movements.forEach((movement, i) => {
+      if (doc.y > 700) doc.addPage()
+
+      doc.font('Helvetica-Bold').fontSize(10).text(`${i + 1}. ${movement.type} — ${movement.lot.code}`)
+      doc.font('Helvetica').fontSize(9)
+      doc.text(`   Producto: ${movement.lot.name}`)
+      doc.text(`   Descripción: ${movement.description}`)
+      doc.text(`   Cantidad: ${movement.quantity ?? 'N/A'}`)
+      doc.text(`   Origen: ${movement.fromLocation ?? 'N/A'} | Destino: ${movement.toLocation ?? 'N/A'}`)
+      doc.text(`   Registrado por: ${movement.createdBy.name} | Fecha: ${movement.createdAt.toISOString().split('T')[0]}`)
+      doc.moveDown(0.5)
+    })
+
+    doc.end()
+  })
+}
+
 export const exportLotsPDF = async (organizationId) => {
   const lots = await getLotData(organizationId)
 

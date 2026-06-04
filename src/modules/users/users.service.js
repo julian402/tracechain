@@ -13,6 +13,7 @@ import {
 import { AppError } from '../../shared/AppError.js'
 import { getPlanLimit } from '../../shared/plans.js'
 import { OWNER_ROLE_NAME } from '../../shared/rbac.js'
+import { findOrganizationById } from '../organizations/organizations.repository.js'
 
 const stripPassword = ({ password: _pw, ...rest }) => rest
 
@@ -64,17 +65,43 @@ export const updateUserService = async (id, data, { organizationId, canManage, r
   if (data.name !== undefined) updateData.name = data.name
   if (data.email !== undefined) updateData.email = data.email
 
+  if (data.isSuperAdmin !== undefined) {
+    if (!isSuperAdmin) throw new AppError('No autorizado para cambiar super admin', 403)
+    updateData.isSuperAdmin = data.isSuperAdmin
+  }
+
+  if (data.organizationId !== undefined) {
+    if (!isSuperAdmin) throw new AppError('No autorizado para cambiar la organización', 403)
+    if (data.organizationId === null) {
+      updateData.organizationId = null
+    } else {
+      const org = await findOrganizationById(data.organizationId)
+      if (!org) throw new AppError('Organización no encontrada', 404)
+      updateData.organizationId = data.organizationId
+    }
+  }
+
   if (data.roleId !== undefined) {
     if (!canManage) throw new AppError('No autorizado para cambiar el rol', 403)
-    const orgId = isSuperAdmin ? user.organizationId : organizationId
-    const role = await findRoleInOrg(data.roleId, orgId)
-    if (!role) throw new AppError('El rol indicado no pertenece a la organización', 400)
+    if (data.roleId === null) {
+      updateData.roleId = null
+    } else {
+      const orgId = isSuperAdmin
+        ? (updateData.organizationId !== undefined ? updateData.organizationId : user.organizationId)
+        : organizationId
+      if (!orgId) throw new AppError('Selecciona una organización antes de asignar rol', 400)
 
-    if (user.role?.name === OWNER_ROLE_NAME && role.name !== OWNER_ROLE_NAME) {
-      const admins = await countUsersWithRole(user.roleId, orgId)
-      if (admins <= 1) throw new AppError('La organización debe tener al menos un administrador', 400)
+      const role = await findRoleInOrg(data.roleId, orgId)
+      if (!role) throw new AppError('El rol indicado no pertenece a la organización', 400)
+
+      if (user.role?.name === OWNER_ROLE_NAME && role.name !== OWNER_ROLE_NAME) {
+        const admins = await countUsersWithRole(user.roleId, user.organizationId)
+        if (admins <= 1) throw new AppError('La organización debe tener al menos un administrador', 400)
+      }
+      updateData.roleId = data.roleId
     }
-    updateData.roleId = data.roleId
+  } else if (data.organizationId !== undefined && data.organizationId !== user.organizationId && !updateData.isSuperAdmin) {
+    throw new AppError('Selecciona un rol de la nueva organización', 400)
   }
 
   try {
@@ -83,15 +110,6 @@ export const updateUserService = async (id, data, { organizationId, canManage, r
     if (err.code === 'P2002') throw new AppError('El email ya está registrado', 400)
     throw err
   }
-}
-
-export const promoteToSuperAdminService = async (id, requestorIsSuperAdmin) => {
-  if (!requestorIsSuperAdmin) throw new AppError('No autorizado', 403)
-  const user = await findUserById(id)
-  if (!user) throw new AppError('Usuario no encontrado', 404)
-  if (user.isSuperAdmin) throw new AppError('El usuario ya es super admin', 400)
-  // Solo activa el flag — conserva la org y el rol para no dejar organizationId en null
-  return updateUser(id, { isSuperAdmin: true })
 }
 
 export const changePassword = async (id, { currentPassword, newPassword }) => {

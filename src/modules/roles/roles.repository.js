@@ -60,6 +60,42 @@ export const setRolePermissions = async (id, permissionIds) => {
   return prisma.role.findUnique({ where: { id }, include: roleInclude })
 }
 
+export const findUsersByIdsInOrg = (ids, organizationId) => {
+  return prisma.user.findMany({
+    where: { id: { in: ids }, organizationId },
+    select: {
+      id: true,
+      roleId: true,
+      role: { select: { name: true } }
+    }
+  })
+}
+
+export const countRoleUsers = (roleId, organizationId) => {
+  return prisma.user.count({ where: { roleId, organizationId } })
+}
+
+export const setRoleUsers = async ({ roleId, organizationId, userIds }) => {
+  await prisma.$transaction([
+    prisma.user.updateMany({
+      where: {
+        organizationId,
+        roleId,
+        ...(userIds.length ? { id: { notIn: userIds } } : {})
+      },
+      data: { roleId: null }
+    }),
+    ...(userIds.length
+      ? [prisma.user.updateMany({
+          where: { organizationId, id: { in: userIds } },
+          data: { roleId }
+        })]
+      : [])
+  ])
+
+  return prisma.role.findUnique({ where: { id: roleId }, include: roleInclude })
+}
+
 export const deleteRole = (id) => {
   return prisma.role.delete({ where: { id } })
 }

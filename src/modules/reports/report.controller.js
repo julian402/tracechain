@@ -1,4 +1,4 @@
-import { exportLotsCSV, exportMovementsCSV, exportLotsPDF, exportAuditCSV } from './report.service.js'
+import { exportLotsCSV, exportMovementsCSV, exportMovementsPDF, exportLotsPDF, exportAuditCSV } from './report.service.js'
 
 export const exportLotsCSVController = async (req, res, next) => {
   try {
@@ -17,6 +17,17 @@ export const exportMovementsCSVController = async (req, res, next) => {
     res.setHeader('Content-Type', 'text/csv')
     res.setHeader('Content-Disposition', 'attachment; filename=movimientos.csv')
     res.send(csv)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const exportMovementsPDFController = async (req, res, next) => {
+  try {
+    const pdf = await exportMovementsPDF(req.organizationId)
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', 'attachment; filename=reporte-movimientos.pdf')
+    res.send(pdf)
   } catch (error) {
     next(error)
   }

@@ -6,6 +6,9 @@ import {
   createRole,
   updateRoleMeta,
   setRolePermissions,
+  findUsersByIdsInOrg,
+  countRoleUsers,
+  setRoleUsers,
   deleteRole
 } from './roles.repository.js'
 import { AppError } from '../../shared/AppError.js'
@@ -17,6 +20,7 @@ const toDTO = (role) => ({
   name: role.name,
   description: role.description,
   isSystem: role.isSystem,
+  organizationId: role.organizationId,
   permissions: (role.permissions ?? []).map((rp) => rp.permission.key),
   usersCount: role._count?.users ?? 0
 })
@@ -75,6 +79,35 @@ export const setPermissionsService = async (id, permissions, organizationId) => 
 
   const permissionIds = await findPermissionIdsByKeys(permissions)
   const updated = await setRolePermissions(id, permissionIds)
+  return toDTO(updated)
+}
+
+export const setRoleUsersService = async (id, userIds, organizationId) => {
+  const role = await findRoleById(id, organizationId)
+  if (!role) throw new AppError('Rol no encontrado', 404)
+
+  const uniqueUserIds = [...new Set(userIds)]
+  const users = await findUsersByIdsInOrg(uniqueUserIds, organizationId)
+  if (users.length !== uniqueUserIds.length) {
+    throw new AppError('Uno o más usuarios no pertenecen a la organización', 400)
+  }
+
+  const ownerRole = await findRoleByName(OWNER_ROLE_NAME, organizationId)
+  if (ownerRole) {
+    if (role.name === OWNER_ROLE_NAME && uniqueUserIds.length === 0) {
+      throw new AppError('La organización debe tener al menos un administrador', 400)
+    }
+
+    if (role.name !== OWNER_ROLE_NAME) {
+      const selectedOwnerUsers = users.filter((user) => user.role?.name === OWNER_ROLE_NAME).length
+      const currentOwnerUsers = await countRoleUsers(ownerRole.id, organizationId)
+      if (currentOwnerUsers - selectedOwnerUsers <= 0) {
+        throw new AppError('La organización debe tener al menos un administrador', 400)
+      }
+    }
+  }
+
+  const updated = await setRoleUsers({ roleId: id, organizationId, userIds: uniqueUserIds })
   return toDTO(updated)
 }
 
