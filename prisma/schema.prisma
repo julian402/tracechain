@@ -66,6 +66,10 @@ model Organization {
   planId String
   plan   Plan   @relation(fields: [planId], references: [id])
 
+  // Overrides por organización sobre los límites del plan.
+  // customLimits: { "lots": 20, "users": 5 } (null/ausente = usa el plan base)
+  customLimits Json @default("{}")
+
   users     User[]
   roles     Role[]
   lots      Lot[]

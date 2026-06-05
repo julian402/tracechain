@@ -34,6 +34,7 @@ const router = Router()
  *         description: Email ya registrado
  */
 router.post('/register', validate(registerOrgDto), registerController)
+router.post('/register-org', validate(registerOrgDto), registerController)
 
 /**
  * @swagger

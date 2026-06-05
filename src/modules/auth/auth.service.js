@@ -41,7 +41,7 @@ const buildSession = async (userId) => {
  * defecto y crea el usuario administrador de esa organización. Todo en una
  * transacción para no dejar organizaciones huérfanas.
  */
-export const registerOrganization = async ({ organizationName, name, email, password }) => {
+export const registerOrganization = async ({ organizationName, slug: requestedSlug, name, email, password }) => {
   const exists = await findUserByEmail(email)
   if (exists) throw new AppError('El email ya está registrado', 400)
 
@@ -50,7 +50,7 @@ export const registerOrganization = async ({ organizationName, name, email, pass
 
   const hashed = await bcrypt.hash(password, 10)
 
-  const base = slugify(organizationName) || 'org'
+  const base = slugify(requestedSlug || organizationName) || 'org'
   let slug = base
   let suffix = 1
   while (await prisma.organization.findUnique({ where: { slug } })) {

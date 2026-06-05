@@ -4,6 +4,7 @@ import {
   getOrganizationDetail,
   getMyOrganization,
   updateMyOrganization,
+  updateOrganizationAdmin,
   changeOrganizationPlan,
   changeOrganizationStatus,
 } from './organizations.service.js'
@@ -48,6 +49,15 @@ export const updateMyOrganizationController = async (req, res, next) => {
 export const getOrganizationController = async (req, res, next) => {
   try {
     const org = await getOrganizationDetail(req.params.id)
+    successResponse(res, org)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const updateOrganizationAdminController = async (req, res, next) => {
+  try {
+    const org = await updateOrganizationAdmin(req.params.id, req.body)
     successResponse(res, org)
   } catch (error) {
     next(error)

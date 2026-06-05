@@ -1,4 +1,5 @@
 import prisma from '../config/db.js'
+import { buildEffectivePlan } from './plans.js'
 
 /**
  * Carga el contexto de acceso de un usuario en cada request: organización,
@@ -25,7 +26,7 @@ export const findUserAccessContext = async (id) => {
         },
       },
       organization: {
-        select: { id: true, name: true, slug: true, status: true, plan: true },
+        select: { id: true, name: true, slug: true, status: true, customLimits: true, plan: true },
       },
     },
   })
@@ -42,7 +43,7 @@ export const findUserAccessContext = async (id) => {
     roleName: user.role?.name ?? null,
     permissionKeys: (user.role?.permissions ?? []).map((rp) => rp.permission.key),
     organization: user.organization ?? null,
-    plan: user.organization?.plan ?? null,
+    plan: buildEffectivePlan(user.organization),
   }
 }
 

@@ -1,7 +1,7 @@
 import prisma from '../../config/db.js'
 import { AppError } from '../../shared/AppError.js'
 import { findPlanById } from '../plans/plans.repository.js'
-import { PLAN_LIMITS, PLAN_FEATURES, getPlanLimit, planHasFeature } from '../../shared/plans.js'
+import { PLAN_LIMITS, PLAN_FEATURES, getOrganizationLimit, planHasFeature } from '../../shared/plans.js'
 import { seedOrganizationRoles } from '../../shared/rbac.js'
 import {
   findAllOrganizations,
@@ -27,6 +27,9 @@ const toListDTO = (org) => ({
   slug: org.slug,
   status: org.status,
   createdAt: org.createdAt,
+  updatedAt: org.updatedAt,
+  planId: org.planId,
+  customLimits: org.customLimits ?? {},
   plan: org.plan ? { id: org.plan.id, key: org.plan.key, name: org.plan.name } : null,
   usersCount: org._count?.users ?? 0,
   lotsCount: org._count?.lots ?? 0,
@@ -44,7 +47,7 @@ const buildUsage = async (org) => {
   const usageByKey = { lots, users }
 
   const limits = PLAN_LIMITS.map((l) => {
-    const max = getPlanLimit(org.plan, l.key)
+    const max = getOrganizationLimit(org, l.key)
     const used = usageByKey[l.key] ?? null
     return {
       key: l.key,
@@ -52,6 +55,7 @@ const buildUsage = async (org) => {
       max,                         // null = ilimitado
       used,
       reached: max != null && used != null && used >= max,
+      source: org.customLimits?.[l.key] !== undefined ? 'organization' : 'plan',
     }
   })
 
@@ -64,11 +68,20 @@ const buildUsage = async (org) => {
   return { limits, features }
 }
 
-export const createOrganizationService = async ({ name, slug, planId }) => {
+const validateCustomLimits = (customLimits = {}) => {
+  const data = {}
+  Object.entries(customLimits).forEach(([key, value]) => {
+    if (!PLAN_LIMITS.some((limit) => limit.key === key)) return
+    data[key] = value == null ? null : Number(value)
+  })
+  return data
+}
+
+export const createOrganizationService = async ({ name, slug, planId, customLimits }) => {
   const plan = await findPlanById(planId)
   if (!plan) throw new AppError('Plan no encontrado', 404)
 
-  const base = slug || slugify(name) || 'org'
+  const base = slugify(slug || name) || 'org'
   let finalSlug = base
   let suffix = 1
   while (await prisma.organization.findUnique({ where: { slug: finalSlug } })) {
@@ -76,7 +89,9 @@ export const createOrganizationService = async ({ name, slug, planId }) => {
   }
 
   const org = await prisma.$transaction(async (tx) => {
-    const created = await tx.organization.create({ data: { name, slug: finalSlug, planId } })
+    const created = await tx.organization.create({
+      data: { name, slug: finalSlug, planId, customLimits: validateCustomLimits(customLimits) }
+    })
     await seedOrganizationRoles(tx, created.id)
     return created
   })
@@ -113,19 +128,44 @@ export const changeOrganizationPlan = async (id, planId) => {
   return getOrganizationDetail(updated.id)
 }
 
-export const updateMyOrganization = async (organizationId, { name, slug }) => {
-  if (!organizationId) throw new AppError('No perteneces a ninguna organización', 404)
-  const org = await findOrganizationById(organizationId)
+export const updateOrganizationAdmin = async (id, { name, slug, planId, customLimits }) => {
+  const org = await findOrganizationById(id)
   if (!org) throw new AppError('Organización no encontrada', 404)
 
-  if (slug && slug !== org.slug) {
-    const existing = await prisma.organization.findUnique({ where: { slug } })
+  const finalSlug = slug !== undefined ? slugify(slug) : undefined
+  if (finalSlug && finalSlug !== org.slug) {
+    const existing = await prisma.organization.findUnique({ where: { slug: finalSlug } })
     if (existing) throw new AppError('El slug ya está en uso', 400)
   }
 
   const data = {}
   if (name !== undefined) data.name = name
-  if (slug !== undefined) data.slug = slug
+  if (finalSlug !== undefined) data.slug = finalSlug
+  if (planId !== undefined) {
+    const plan = await findPlanById(planId)
+    if (!plan) throw new AppError('Plan no encontrado', 404)
+    data.planId = planId
+  }
+  if (customLimits !== undefined) data.customLimits = validateCustomLimits(customLimits)
+
+  const updated = await updateOrganization(id, data)
+  return getOrganizationDetail(updated.id)
+}
+
+export const updateMyOrganization = async (organizationId, { name, slug }) => {
+  if (!organizationId) throw new AppError('No perteneces a ninguna organización', 404)
+  const org = await findOrganizationById(organizationId)
+  if (!org) throw new AppError('Organización no encontrada', 404)
+
+  const finalSlug = slug !== undefined ? slugify(slug) : undefined
+  if (finalSlug && finalSlug !== org.slug) {
+    const existing = await prisma.organization.findUnique({ where: { slug: finalSlug } })
+    if (existing) throw new AppError('El slug ya está en uso', 400)
+  }
+
+  const data = {}
+  if (name !== undefined) data.name = name
+  if (finalSlug !== undefined) data.slug = finalSlug
 
   await updateOrganization(organizationId, data)
   return getOrganizationDetail(organizationId)

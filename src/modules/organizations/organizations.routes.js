@@ -5,12 +5,13 @@ import {
   getMyOrganizationController,
   updateMyOrganizationController,
   getOrganizationController,
+  updateOrganizationAdminController,
   changeOrganizationPlanController,
   changeOrganizationStatusController,
 } from './organizations.controller.js'
 import { authenticate, requireSuperAdmin, requirePermission } from '../../middlewares/auth.js'
 import { validate } from '../../middlewares/validate.js'
-import { createOrgDto, changePlanDto, changeStatusDto, updateOrgDto } from './organizations.dto.js'
+import { createOrgDto, changePlanDto, changeStatusDto, updateOrgDto, updateAdminOrgDto } from './organizations.dto.js'
 
 const router = Router()
 
@@ -42,6 +43,7 @@ router.patch('/me', authenticate, requirePermission('users:manage'), validate(up
 router.post('/', authenticate, requireSuperAdmin, validate(createOrgDto), createOrganizationController)
 router.get('/', authenticate, requireSuperAdmin, getOrganizationsController)
 router.get('/:id', authenticate, requireSuperAdmin, getOrganizationController)
+router.patch('/:id', authenticate, requireSuperAdmin, validate(updateAdminOrgDto), updateOrganizationAdminController)
 router.patch('/:id/plan', authenticate, requireSuperAdmin, validate(changePlanDto), changeOrganizationPlanController)
 router.patch('/:id/status', authenticate, requireSuperAdmin, validate(changeStatusDto), changeOrganizationStatusController)
 

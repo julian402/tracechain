@@ -13,7 +13,7 @@ export const findAllOrganizations = () => {
 export const findOrganizationById = (id) => {
   return prisma.organization.findUnique({
     where: { id },
-    include: { plan: true }
+    include: { plan: true, _count: { select: { users: true, lots: true } } }
   })
 }
 

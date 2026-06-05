@@ -37,5 +37,27 @@ export const getPlanLimit = (plan, key) => {
   return Number(value)
 }
 
+/**
+ * Límite efectivo para una organización: primero mira override de la org,
+ * si no existe usa el límite del plan.
+ */
+export const getOrganizationLimit = (organization, key) => {
+  const customValue = organization?.customLimits?.[key]
+  if (customValue !== undefined) {
+    if (customValue == null || customValue < 0) return null
+    return Number(customValue)
+  }
+  return getPlanLimit(organization?.plan, key)
+}
+
+export const buildEffectivePlan = (organization) => {
+  if (!organization?.plan) return null
+  const limits = { ...(organization.plan.limits ?? {}) }
+  Object.entries(organization.customLimits ?? {}).forEach(([key, value]) => {
+    limits[key] = value
+  })
+  return { ...organization.plan, limits }
+}
+
 /** Indica si el plan incluye una feature. */
 export const planHasFeature = (plan, key) => Boolean(plan?.features?.[key])
